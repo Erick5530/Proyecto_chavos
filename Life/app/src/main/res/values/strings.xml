@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">Life</string>
+    <string name="title_activity_registro">RegistroActivity</string>
+</resources>
