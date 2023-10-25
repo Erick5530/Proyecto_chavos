@@ -1,104 +1,116 @@
 package com.example.life
 
-import android.os.Bundle
-import android.widget.TextView
-import androidx.appcompat.app.AppCompatActivity
-import java.util.Calendar
 import android.app.AlertDialog
 import android.content.DialogInterface
-import com.android.volley.Request
-import com.android.volley.Response
-import com.android.volley.toolbox.StringRequest
-import com.android.volley.toolbox.Volley
-import org.json.JSONArray
-import org.json.JSONObject
-import java.nio.charset.Charset
+import android.os.Bundle
+import android.widget.Toast
+import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.ViewModelProvider
+import com.example.life.databinding.ActivityAlertaBinding
+import com.example.life.viewmodel.ViewModelAlertaAcceder
+import com.google.android.gms.maps.CameraUpdateFactory
+import com.google.android.gms.maps.GoogleMap
+import com.google.android.gms.maps.GoogleMapOptions
+import com.google.android.gms.maps.OnMapReadyCallback
+import com.google.android.gms.maps.SupportMapFragment
+import com.google.android.gms.maps.model.BitmapDescriptorFactory
+import com.google.android.gms.maps.model.LatLng
+import com.google.android.gms.maps.model.MarkerOptions
 
 
-class AlertaActivity : AppCompatActivity() {
+class AlertaActivity : AppCompatActivity(), OnMapReadyCallback {
+
+    private lateinit var binding: ActivityAlertaBinding
+    private lateinit var viewModel: ViewModelAlertaAcceder
+
+    private var mapaG: SupportMapFragment? = null
+    private var googleMap: GoogleMap? = null
+
+    private var extraCoordinates: String? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_acceder)
+        initBinding()
+        recoverDataIntent()
+        initObservers()
+        initConfigForMap()
+    }
 
-        // Inicializamos 'nombre' con un valor por defecto
-        var nombre = "Desconocido"
+    private fun initBinding() {
+        viewModel = ViewModelProvider(this)[ViewModelAlertaAcceder::class.java]
+        binding = ActivityAlertaBinding.inflate(layoutInflater)
+        setContentView(binding.root)
+    }
 
-        // Realizamos la solicitud y actualizamos 'nombre' cuando recibamos la ubicación
-        realizarSolicitud("57DB0A") { ubicacion ->
-            nombre = ubicacion
-            actualizarUI(nombre)
+    private fun recoverDataIntent() {
+        extraCoordinates = intent.getStringExtra("ubi")
+    }
+
+    private fun initObservers() {
+        viewModel.lastUbication.observe(this) { coordinates ->
+            setCoordinatesInMap(coordinates)
         }
     }
 
-    // Actualiza la UI con el nuevo valor de 'nombre'
-    private fun actualizarUI(nombre: String) {
-        val saludoTextView: TextView = findViewById(R.id.saludoTextView)
-        val estadoTextView: TextView = findViewById(R.id.estadoTextView)
+    private fun setCoordinatesInMap(coordinates: String) {
+        this.googleMap?.addMarker(
+            MarkerOptions()
+                .position(
+                    LatLng(
+                        coordinates.split(",")[0].trim().toDouble(),
+                        coordinates.split(",")[1].trim().toDouble()
+                    )
+                )
+                .title("Lo que quieren que se vea en la ventana al presionar el marker despues del servicio")
+                .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED))
+        )
 
-        val calendar = Calendar.getInstance()
-        val hora = calendar.get(Calendar.HOUR_OF_DAY)
-        val estado = "Todo MAL"
+        val location = CameraUpdateFactory.newLatLngZoom(
+            LatLng(
+                coordinates.split(",")[0].trim().toDouble(),
+                coordinates.split(",")[1].trim().toDouble()
+            ), 15f
+        )
+        this.googleMap?.animateCamera(location)
 
-        val saludo: String = when (hora) {
-            in 6..11 -> "Buenos Días, $nombre"
-            in 12..17 -> "Buenas Tardes, $nombre"
-            else -> "Buenas Noches, $nombre"
-        }
-
-        saludoTextView.text = saludo
-        estadoTextView.text = "El estado de $nombre es $estado"
     }
+
+    private fun requestLastUbication(token: String) {
+        viewModel.getLastUbicationService(
+            context = this,
+            token = token,
+            callback = { isOk, message ->
+                runOnUiThread {
+                    Toast.makeText(
+                        this, if (isOk) "Consulta correcta"
+                        else "Error en consulta: $message", Toast.LENGTH_SHORT
+                    ).show()
+                }
+
+            }
+        )
+    }
+
+    private fun initConfigForMap() {
+
+        mapaG = supportFragmentManager.findFragmentById(R.id.map) as SupportMapFragment
+        mapaG?.getMapAsync(this)
+
+        val options = GoogleMapOptions()
+        options.useViewLifecycleInFragment(true)
+        mapaG = SupportMapFragment.newInstance(options)
+    }
+
 
     override fun onBackPressed() {
         AlertDialog.Builder(this)
             .setTitle("Salir")
             .setMessage("¿Estás seguro de que deseas salir de la aplicación?")
-            .setPositiveButton("OK", DialogInterface.OnClickListener { _, _ ->
+            .setPositiveButton("OK") { _, _ ->
                 finishAffinity()
-            })
+            }
             .setNegativeButton("No", null)
             .show()
-    }
-
-    private fun realizarSolicitud(codigo: String, callback: (String) -> Unit) {
-        val colaDeSolicitudes = Volley.newRequestQueue(this)
-        val url = "https://hip-koi-logically.ngrok-free.app/Contacto/VerUltimaNotificacion"
-
-        val jsonBody = JSONObject().apply {
-            put("token", codigo)
-        }
-
-        val solicitud = object : StringRequest(
-            Request.Method.POST, url,
-            Response.Listener<String> { respuesta ->
-                if (respuesta.isEmpty()) {
-                    mostrarAlerta("Respuesta vacía del servidor")
-                    return@Listener
-                }
-                try {
-                    val jsonArray = JSONArray(respuesta)
-                    val jsonObject = jsonArray.getJSONObject(0)
-                    val UBICACION = jsonObject.getString("UBICACION")
-                    callback(UBICACION)
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                }
-            },
-            Response.ErrorListener { error ->
-                // Manejo de errores
-            }
-        ) {
-            override fun getBodyContentType(): String {
-                return "application/json; charset=utf-8"
-            }
-
-            override fun getBody(): ByteArray {
-                return jsonBody.toString().toByteArray(Charset.forName("utf-8"))
-            }
-        }
-
-        colaDeSolicitudes.add(solicitud)
     }
 
     private fun mostrarAlerta(mensaje: String) {
@@ -109,5 +121,19 @@ class AlertaActivity : AppCompatActivity() {
             }
         val dialog = builder.create()
         dialog.show()
+    }
+
+
+    override fun onMapReady(googleMap: GoogleMap) {
+        this.googleMap = googleMap
+        println("Se cargo el mapa correctamente en alerta")
+
+        if (extraCoordinates == null) {
+            requestLastUbication("57DB0A")
+        } else {
+            viewModel.setNewCoordinates(extraCoordinates ?: "0.0,0.0")
+        }
+
+
     }
 }

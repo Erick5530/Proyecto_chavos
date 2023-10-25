@@ -1,36 +1,37 @@
 package com.example.life
 
-import android.os.Bundle
-import android.widget.TextView
-import androidx.appcompat.app.AppCompatActivity
-import java.text.SimpleDateFormat
-import java.util.Calendar
 import android.app.AlertDialog
 import android.content.DialogInterface
+import android.os.Bundle
+import androidx.appcompat.app.AppCompatActivity
+import com.example.life.databinding.ActivityAccederBinding
 
 class AccederActivity : AppCompatActivity() {
+    private lateinit var binding: ActivityAccederBinding
+    private var nombre: String? = null
+
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_acceder)
-
-        val saludoTextView: TextView = findViewById(R.id.saludoTextView)
-        val estadoTextView: TextView = findViewById(R.id.estadoTextView)
-
-        val calendar = Calendar.getInstance()
-        val hora = calendar.get(Calendar.HOUR_OF_DAY)
-
-        val nombre = intent.getStringExtra("nombre")
-        val estado = "Todo Bien"
-
-        val saludo: String = when (hora) {
-            in 6..11 -> "Buenos Días, $nombre"
-            in 12..17 -> "Buenas Tardes, $nombre"
-            else -> "Buenas Noches, $nombre"
-        }
-
-        saludoTextView.text = saludo
-        estadoTextView.text = "El estado de $nombre es $estado"
+        initBinding()
+        recoverDataIntent()
+        setInitValues()
     }
+
+    private fun initBinding() {
+        binding = ActivityAccederBinding.inflate(layoutInflater)
+        setContentView(binding.root)
+    }
+
+    private fun setInitValues(){
+        binding.saludoTextView.text = "Todo está bien \n $nombre \n la aplicación funciona correctamente."
+    }
+
+    private fun recoverDataIntent() {
+        nombre = intent.getStringExtra("nombre") ?: "Desconocido"
+    }
+
+
     override fun onBackPressed() {
         AlertDialog.Builder(this)
             .setTitle("Salir")
@@ -41,4 +42,7 @@ class AccederActivity : AppCompatActivity() {
             .setNegativeButton("No", null)
             .show()
     }
+
+
+
 }

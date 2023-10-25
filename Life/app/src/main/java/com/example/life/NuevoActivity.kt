@@ -27,7 +27,7 @@ class NuevoActivity : AppCompatActivity() {
         startActivity(i)
     }
     private fun gotoAccederN(){
-        val i = Intent(this, AccederActivity::class.java)
+        val i = Intent(this, AlertaActivity::class.java)
         startActivity(i)
     }
 

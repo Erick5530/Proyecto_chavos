@@ -1,4 +1,7 @@
 <resources>
     <string name="app_name">Life</string>
     <string name="title_activity_registro">RegistroActivity</string>
+    <string name="google_maps_key" templateMergeStrategy="preserve" translatable="false">AIzaSyBXUk5CXuW0hYESmZGLZ2HiIKEWZKT79KA</string>
+    <string name="pref_default_base_url">https://hip-koi-logically.ngrok-free.app/</string>
+
 </resources>
